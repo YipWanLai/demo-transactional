@@ -1,5 +1,10 @@
-# To demonstrate the usage of spring @Transaction
-There is a class `BookService`, with two methods, `transactionalMethod()` and `nonTransactionalMethod()`. `nonTransactionalMethod()` will call to `transactionalMethod()`, and you are surprised when called by `nonTransactionalMethod()`, `transactionalMethod()` also becomes non-transactional. You can run the two test cases in `BookServiceTest`.
+# To demonstrate the usage (gotcha) of spring @Transaction
+There is a class `BookService`, with two methods, `transactionalMethod()` and `nonTransactionalMethod()`. `transactionalMethod()` annotated with `@Transactional`, whereas `nonTransactionalMethod()` is not. When `transactionalMethod()` is being invoked, the database queries happen within it will happen within a database transaction, meaning all database queries would be rolled back if exception happened, committed if everything is ok.
+
+1. `BookServiceTest -> bookService -> transactionalMethod()`
+2. `BookServiceTest -> bookService -> nonTransactionMethod() -> transactionMethod()`
+
+And you think in the case 2 above, even though `nonTransactionalMethod()` is non-transactional, but it calls to `transactionalMethod()`, database queries should also be transaction-ied, but it is not. In case 2, none of the database queries is transaction-ied.
 
 Reason being, let's say this is `BookService`
 
@@ -13,6 +18,6 @@ When `BookServiceTest` calls `BookService`, it will first go to spring proxy, sp
 
 ![Transactional](annotation-method.jpg)
 
-Whereas when `transactionalMethod()` being called from `nonTransactionalMethod()`, because `transactionalMethod()` was not called within spring proxy, therefore `@Transactional` magic didn't happen. Like below:
+Whereas when `transactionalMethod()` being called from `nonTransactionalMethod()`, because `transactionalMethod()` was not called within spring proxy (the red arrow), therefore `@Transactional` magic didn't happen. Like below:
 
 ![Internal method](without-annotation-method.jpg)
